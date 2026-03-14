@@ -29,6 +29,10 @@ class Product(Base):
     category = Column(String(255), nullable=False)
     unit = Column(String(255), nullable=False)
     stock = Column(Integer, default=0)
+    # Reordering rules
+    min_stock_level = Column(Integer, default=10)  # Minimum stock before reorder alert
+    max_stock_level = Column(Integer, default=100)  # Maximum stock capacity
+    reorder_point = Column(Integer, default=20)  # Point at which to reorder
 
 
 class Stock(Base):
@@ -47,7 +51,10 @@ class Receipt(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
+    status = Column(String(20), default="draft")  # draft, waiting, ready, done, canceled
+    supplier = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class Delivery(Base):
@@ -57,7 +64,10 @@ class Delivery(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
+    status = Column(String(20), default="draft")  # draft, waiting, ready, done, canceled
+    customer = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class Transfer(Base):
@@ -68,7 +78,9 @@ class Transfer(Base):
     from_warehouse = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     to_warehouse = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
+    status = Column(String(20), default="draft")  # draft, waiting, ready, done, canceled
     created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class StockAdjustment(Base):

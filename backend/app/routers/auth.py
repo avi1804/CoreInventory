@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.connection import get_db
-from app.schemas.schemas import UserCreate, UserLogin, LoginResponse, UserResponse, MessageResponse
-from app.services import auth_service
+from app.schemas.schemas import UserCreate, UserLogin, LoginResponse, UserResponse, MessageResponse, OTPRequest, OTPVerify, PasswordReset
+from app.services import auth_service, email_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -22,3 +22,33 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user:
         raise HTTPException(status_code=400, detail="User not found or wrong password")
     return LoginResponse(message="Login success", user=db_user)
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
+    """Request password reset OTP"""
+    result = email_service.send_password_reset_otp(db, request.email)
+    if result["success"]:
+        return MessageResponse(message=result["message"])
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+
+@router.post("/verify-otp", response_model=MessageResponse)
+def verify_otp(verify: OTPVerify):
+    """Verify OTP code"""
+    result = email_service.verify_otp(verify.email, verify.otp)
+    if result["success"]:
+        return MessageResponse(message=result["message"])
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(reset: PasswordReset, db: Session = Depends(get_db)):
+    """Reset password with OTP"""
+    result = email_service.reset_password(db, reset.email, reset.otp, reset.new_password)
+    if result["success"]:
+        return MessageResponse(message=result["message"])
+    else:
+        raise HTTPException(status_code=400, detail=result["message"])

@@ -33,5 +33,36 @@ def create_receipt(db: Session, receipt: ReceiptCreate) -> Receipt:
     return db_receipt
 
 
-def get_receipts(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Receipt).offset(skip).limit(limit).all()
+def get_receipts(db: Session, skip: int = 0, limit: int = 100, status: str = None, warehouse_id: int = None):
+    query = db.query(Receipt)
+    if status:
+        query = query.filter(Receipt.status == status)
+    if warehouse_id:
+        query = query.filter(Receipt.warehouse_id == warehouse_id)
+    return query.order_by(Receipt.created_at.desc()).offset(skip).limit(limit).all()
+
+
+def update_receipt_status(db: Session, receipt_id: int, new_status: str) -> Receipt:
+    """Update receipt status with workflow validation"""
+    valid_statuses = ["draft", "waiting", "ready", "done", "canceled"]
+    if new_status not in valid_statuses:
+        return None
+    
+    receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
+    if not receipt:
+        return None
+    
+    # Workflow: draft -> waiting -> ready -> done
+    # Can cancel from any status except done
+    current_status = receipt.status
+    
+    if new_status == "canceled" and current_status == "done":
+        return None  # Cannot cancel completed receipts
+    
+    if new_status == "done" and current_status != "ready":
+        return None  # Can only mark as done from ready
+    
+    receipt.status = new_status
+    db.commit()
+    db.refresh(receipt)
+    return receipt

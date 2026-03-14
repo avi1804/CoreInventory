@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, warehouses, products, stock, receipts, deliveries, transfers, adjustments, ledger, dashboard, search, profile
+from app.routers import auth, warehouses, products, stock, receipts, deliveries, transfers, adjustments, ledger, dashboard, search, profile, reorder
 from app.database.connection import engine, Base
 
 # Create all tables
@@ -31,6 +31,7 @@ app.include_router(ledger.router)
 app.include_router(dashboard.router)
 app.include_router(search.router)
 app.include_router(profile.router)
+app.include_router(reorder.router)
 
 
 @app.get("/")

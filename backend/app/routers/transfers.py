@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database.connection import get_db
-from app.schemas.schemas import TransferCreate, TransferResponse, MessageResponse
+from app.schemas.schemas import TransferCreate, TransferUpdate, TransferResponse, MessageResponse
 from app.services import transfer_service
 
 router = APIRouter(prefix="/api/transfers", tags=["transfers"])
@@ -17,5 +18,21 @@ def transfer_stock(transfer: TransferCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/all", response_model=list[TransferResponse])
-def get_transfers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return transfer_service.get_transfers(db, skip=skip, limit=limit)
+def get_transfers(
+    skip: int = 0, 
+    limit: int = 100, 
+    status: Optional[str] = Query(None, description="Filter by status: draft, waiting, ready, done, canceled"),
+    from_warehouse: Optional[int] = Query(None, description="Filter by source warehouse"),
+    to_warehouse: Optional[int] = Query(None, description="Filter by destination warehouse"),
+    db: Session = Depends(get_db)
+):
+    return transfer_service.get_transfers(db, skip=skip, limit=limit, status=status, from_warehouse=from_warehouse, to_warehouse=to_warehouse)
+
+
+@router.put("/status/{transfer_id}", response_model=MessageResponse)
+def update_transfer_status(transfer_id: int, update: TransferUpdate, db: Session = Depends(get_db)):
+    """Update transfer status: draft -> waiting -> ready -> done"""
+    transfer = transfer_service.update_transfer_status(db, transfer_id, update.status)
+    if not transfer:
+        raise HTTPException(status_code=400, detail="Invalid status transition or transfer not found")
+    return MessageResponse(message=f"Transfer status updated to {update.status}")

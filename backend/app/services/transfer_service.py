@@ -50,5 +50,36 @@ def create_transfer(db: Session, transfer: TransferCreate) -> Transfer:
     return db_transfer
 
 
-def get_transfers(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Transfer).offset(skip).limit(limit).all()
+def get_transfers(db: Session, skip: int = 0, limit: int = 100, status: str = None, from_warehouse: int = None, to_warehouse: int = None):
+    query = db.query(Transfer)
+    if status:
+        query = query.filter(Transfer.status == status)
+    if from_warehouse:
+        query = query.filter(Transfer.from_warehouse == from_warehouse)
+    if to_warehouse:
+        query = query.filter(Transfer.to_warehouse == to_warehouse)
+    return query.order_by(Transfer.created_at.desc()).offset(skip).limit(limit).all()
+
+
+def update_transfer_status(db: Session, transfer_id: int, new_status: str) -> Transfer:
+    """Update transfer status with workflow validation"""
+    valid_statuses = ["draft", "waiting", "ready", "done", "canceled"]
+    if new_status not in valid_statuses:
+        return None
+    
+    transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
+    if not transfer:
+        return None
+    
+    current_status = transfer.status
+    
+    if new_status == "canceled" and current_status == "done":
+        return None
+    
+    if new_status == "done" and current_status != "ready":
+        return None
+    
+    transfer.status = new_status
+    db.commit()
+    db.refresh(transfer)
+    return transfer

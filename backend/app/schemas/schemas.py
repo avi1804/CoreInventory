@@ -54,6 +54,9 @@ class ProductBase(BaseModel):
     category: str
     unit: str
     stock: int
+    min_stock_level: int = 10
+    max_stock_level: int = 100
+    reorder_point: int = 20
 
 
 class ProductCreate(ProductBase):
@@ -94,15 +97,22 @@ class ReceiptBase(BaseModel):
     product_id: int
     warehouse_id: int
     quantity: int
+    supplier: Optional[str] = None
 
 
 class ReceiptCreate(ReceiptBase):
     pass
 
 
+class ReceiptUpdate(BaseModel):
+    status: str  # draft, waiting, ready, done, canceled
+
+
 class ReceiptResponse(ReceiptBase):
     id: int
+    status: str
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -113,15 +123,22 @@ class DeliveryBase(BaseModel):
     product_id: int
     warehouse_id: int
     quantity: int
+    customer: Optional[str] = None
 
 
 class DeliveryCreate(DeliveryBase):
     pass
 
 
+class DeliveryUpdate(BaseModel):
+    status: str  # draft, waiting, ready, done, canceled
+
+
 class DeliveryResponse(DeliveryBase):
     id: int
+    status: str
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -139,12 +156,44 @@ class TransferCreate(TransferBase):
     pass
 
 
+class TransferUpdate(BaseModel):
+    status: str  # draft, waiting, ready, done, canceled
+
+
 class TransferResponse(TransferBase):
     id: int
+    status: str
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
+
+
+# OTP Schemas
+class OTPRequest(BaseModel):
+    email: str
+
+
+class OTPVerify(BaseModel):
+    email: str
+    otp: str
+
+
+class PasswordReset(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+
+# Reordering Rules Schema
+class ReorderAlert(BaseModel):
+    product_id: int
+    product_name: str
+    current_stock: int
+    reorder_point: int
+    min_stock_level: int
+    suggested_reorder_quantity: int
 
 
 # Message Response
