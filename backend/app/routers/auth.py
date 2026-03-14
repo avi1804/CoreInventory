@@ -18,10 +18,15 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = auth_service.login(db, user)
-    if not db_user:
+    result = auth_service.login(db, user)
+    if not result:
         raise HTTPException(status_code=400, detail="User not found or wrong password")
-    return LoginResponse(message="Login success", user=db_user)
+    return LoginResponse(
+        message="Login success",
+        user=result["user"],
+        access_token=result["access_token"],
+        token_type=result["token_type"]
+    )
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -35,9 +40,9 @@ def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/verify-otp", response_model=MessageResponse)
-def verify_otp(verify: OTPVerify):
+def verify_otp(verify: OTPVerify, db: Session = Depends(get_db)):
     """Verify OTP code"""
-    result = email_service.verify_otp(verify.email, verify.otp)
+    result = email_service.verify_otp(db, verify.email, verify.otp)
     if result["success"]:
         return MessageResponse(message=result["message"])
     else:

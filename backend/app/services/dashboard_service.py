@@ -18,16 +18,15 @@ def get_dashboard_kpis(db: Session):
         (Stock.quantity == 0) | (Stock.quantity.is_(None))
     ).count()
     
-    # Pending receipts (last 7 days)
-    from datetime import datetime, timedelta
-    week_ago = datetime.now() - timedelta(days=7)
-    pending_receipts = db.query(Receipt).filter(Receipt.created_at >= week_ago).count()
+    # Pending receipts (by status: draft, waiting, ready)
+    pending_statuses = ["draft", "waiting", "ready"]
+    pending_receipts = db.query(Receipt).filter(Receipt.status.in_(pending_statuses)).count()
     
-    # Pending deliveries (last 7 days)
-    pending_deliveries = db.query(Delivery).filter(Delivery.created_at >= week_ago).count()
+    # Pending deliveries (by status: draft, waiting, ready)
+    pending_deliveries = db.query(Delivery).filter(Delivery.status.in_(pending_statuses)).count()
     
-    # Scheduled transfers (last 7 days)
-    scheduled_transfers = db.query(Transfer).filter(Transfer.created_at >= week_ago).count()
+    # Scheduled transfers (by status: draft, waiting, ready)
+    scheduled_transfers = db.query(Transfer).filter(Transfer.status.in_(pending_statuses)).count()
     
     # Total warehouses
     total_warehouses = db.query(Warehouse).count()

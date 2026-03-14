@@ -9,7 +9,9 @@ def create_product(db: Session, product: ProductCreate) -> Product:
         sku=product.sku,
         category=product.category,
         unit=product.unit,
-        stock=product.stock
+        min_stock_level=product.min_stock_level,
+        max_stock_level=product.max_stock_level,
+        reorder_point=product.reorder_point
     )
     db.add(db_product)
     db.commit()
@@ -32,7 +34,12 @@ def update_product(db: Session, product_id: int, product: ProductUpdate) -> Prod
         db_product.sku = product.sku
         db_product.category = product.category
         db_product.unit = product.unit
-        db_product.stock = product.stock
+        if product.min_stock_level is not None:
+            db_product.min_stock_level = product.min_stock_level
+        if product.max_stock_level is not None:
+            db_product.max_stock_level = product.max_stock_level
+        if product.reorder_point is not None:
+            db_product.reorder_point = product.reorder_point
         db.commit()
         db.refresh(db_product)
     return db_product

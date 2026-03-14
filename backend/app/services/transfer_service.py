@@ -6,15 +6,28 @@ from app.services.stock_ledger_service import create_ledger_entry
 
 
 def create_transfer(db: Session, transfer: TransferCreate) -> Transfer:
+    """Create transfer in draft status - stock updated only on validation"""
     db_transfer = Transfer(
         product_id=transfer.product_id,
         from_warehouse=transfer.from_warehouse,
         to_warehouse=transfer.to_warehouse,
-        quantity=transfer.quantity
+        quantity=transfer.quantity,
+        status="draft"
     )
     db.add(db_transfer)
     db.commit()
     db.refresh(db_transfer)
+    return db_transfer
+
+
+def validate_transfer(db: Session, transfer_id: int) -> Transfer:
+    """Validate transfer and update stock - only called when status moves to 'done'"""
+    transfer = db.query(Transfer).filter(Transfer.id == transfer_id).first()
+    if not transfer:
+        return None
+    
+    if transfer.status == "done":
+        return transfer  # Already validated
     
     # Decrease stock from source warehouse
     from_stock = update_stock_quantity(db, transfer.product_id, transfer.from_warehouse, -transfer.quantity)
@@ -29,7 +42,7 @@ def create_transfer(db: Session, transfer: TransferCreate) -> Transfer:
         warehouse_id=transfer.from_warehouse,
         movement_type="transfer_out",
         quantity=-transfer.quantity,
-        reference_id=db_transfer.id,
+        reference_id=transfer.id,
         reference_type="transfer",
         balance_after=from_stock.quantity
     )
@@ -41,13 +54,16 @@ def create_transfer(db: Session, transfer: TransferCreate) -> Transfer:
         warehouse_id=transfer.to_warehouse,
         movement_type="transfer_in",
         quantity=transfer.quantity,
-        reference_id=db_transfer.id,
+        reference_id=transfer.id,
         reference_type="transfer",
         balance_after=to_stock.quantity
     )
     create_ledger_entry(db, ledger_in)
     
-    return db_transfer
+    transfer.status = "done"
+    db.commit()
+    db.refresh(transfer)
+    return transfer
 
 
 def get_transfers(db: Session, skip: int = 0, limit: int = 100, status: str = None, from_warehouse: int = None, to_warehouse: int = None):
@@ -76,8 +92,11 @@ def update_transfer_status(db: Session, transfer_id: int, new_status: str) -> Tr
     if new_status == "canceled" and current_status == "done":
         return None
     
-    if new_status == "done" and current_status != "ready":
-        return None
+    # When transitioning to done, validate and update stock
+    if new_status == "done":
+        if current_status != "ready":
+            return None
+        return validate_transfer(db, transfer_id)
     
     transfer.status = new_status
     db.commit()

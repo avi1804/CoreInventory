@@ -11,21 +11,33 @@ BASE_URL = "http://localhost:8000"
 # Test results tracking
 results = []
 
+# Global token storage
+auth_token = None
 
-def test_endpoint(method, endpoint, data=None, description=""):
+
+def get_headers():
+    """Get headers with authorization if token exists"""
+    headers = {"Content-Type": "application/json"}
+    if auth_token:
+        headers["Authorization"] = f"Bearer {auth_token}"
+    return headers
+
+
+def test_endpoint(method, endpoint, data=None, description="", use_auth=False):
     """Test an API endpoint and print results"""
     url = f"{BASE_URL}{endpoint}"
+    headers = get_headers() if use_auth else {"Content-Type": "application/json"}
     try:
         if method == "GET":
-            response = requests.get(url, timeout=5)
+            response = requests.get(url, headers=headers, timeout=5)
         elif method == "POST":
-            response = requests.post(url, json=data, timeout=5)
+            response = requests.post(url, json=data, headers=headers, timeout=5)
         elif method == "PUT":
-            response = requests.put(url, json=data, timeout=5)
+            response = requests.put(url, json=data, headers=headers, timeout=5)
         elif method == "DELETE":
-            response = requests.delete(url, timeout=5)
+            response = requests.delete(url, headers=headers, timeout=5)
         else:
-            response = requests.request(method, url, json=data, timeout=5)
+            response = requests.request(method, url, json=data, headers=headers, timeout=5)
         
         status = "✅ PASS" if response.status_code < 400 else "❌ FAIL"
         results.append({
@@ -103,8 +115,18 @@ def run_all_tests():
         "email": "testuser@example.com",
         "password": "testpassword123"
     }
-    test_endpoint("POST", "/api/auth/login", data=login_data, 
+    login_response = test_endpoint("POST", "/api/auth/login", data=login_data, 
                   description="Login with credentials")
+    
+    # Extract JWT token from login response
+    global auth_token
+    if login_response and login_response.status_code == 200:
+        try:
+            login_json = login_response.json()
+            auth_token = login_json.get("access_token")
+            print(f"   JWT Token extracted: {auth_token[:20]}..." if auth_token else "   No token found")
+        except:
+            print("   Could not extract token from response")
     
     # 3. Warehouse Endpoints
     print("\n" + "-" * 60)
@@ -306,12 +328,12 @@ def run_all_tests():
     print("PROFILE ENDPOINTS")
     print("-" * 60)
     
-    test_endpoint("GET", "/api/profile/me?user_id=1", 
-                  description="Get user profile")
+    test_endpoint("GET", "/api/profile/me", 
+                  description="Get user profile (requires auth)", use_auth=True)
     
     profile_update = {"name": "Updated User"}
-    test_endpoint("PUT", "/api/profile/update?user_id=1", data=profile_update, 
-                  description="Update user profile")
+    test_endpoint("PUT", "/api/profile/update", data=profile_update, 
+                  description="Update user profile (requires auth)", use_auth=True)
     
     test_endpoint("POST", "/api/profile/logout", 
                   description="Logout user")

@@ -8,9 +8,6 @@ from sqlalchemy.orm import Session
 from app.config.settings import settings
 from app.models.models import User
 
-# In-memory OTP storage (use Redis in production)
-otp_storage = {}
-
 
 def generate_otp(length=6):
     """Generate a random OTP"""
@@ -47,7 +44,7 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
 
 
 def send_password_reset_otp(db: Session, email: str) -> dict:
-    """Send OTP for password reset"""
+    """Send OTP for password reset - stored in database"""
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return {"success": False, "message": "User not found"}
@@ -55,12 +52,10 @@ def send_password_reset_otp(db: Session, email: str) -> dict:
     otp = generate_otp()
     expiry = datetime.now() + timedelta(minutes=10)  # OTP valid for 10 minutes
     
-    # Store OTP
-    otp_storage[email] = {
-        "otp": otp,
-        "expiry": expiry,
-        "user_id": user.id
-    }
+    # Store OTP in database (persisted across restarts)
+    user.otp = otp
+    user.otp_expiry = expiry
+    db.commit()
     
     # Send email
     subject = "Password Reset OTP - CoreInventory"
@@ -81,27 +76,29 @@ CoreInventory Team"""
         return {"success": False, "message": "Failed to send OTP"}
 
 
-def verify_otp(email: str, otp: str) -> dict:
-    """Verify OTP"""
-    if email not in otp_storage:
+def verify_otp(db: Session, email: str, otp: str) -> dict:
+    """Verify OTP from database"""
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not user.otp:
         return {"success": False, "message": "OTP not found or expired"}
     
-    stored = otp_storage[email]
-    
-    if datetime.now() > stored["expiry"]:
-        del otp_storage[email]
+    if datetime.now() > user.otp_expiry:
+        # Clear expired OTP
+        user.otp = None
+        user.otp_expiry = None
+        db.commit()
         return {"success": False, "message": "OTP expired"}
     
-    if stored["otp"] != otp:
+    if user.otp != otp:
         return {"success": False, "message": "Invalid OTP"}
     
-    return {"success": True, "message": "OTP verified", "user_id": stored["user_id"]}
+    return {"success": True, "message": "OTP verified", "user_id": user.id}
 
 
 def reset_password(db: Session, email: str, otp: str, new_password: str) -> dict:
     """Reset password with OTP verification"""
     # Verify OTP first
-    verification = verify_otp(email, otp)
+    verification = verify_otp(db, email, otp)
     if not verification["success"]:
         return verification
     
@@ -112,10 +109,10 @@ def reset_password(db: Session, email: str, otp: str, new_password: str) -> dict
     
     from app.services.auth_service import get_password_hash
     user.password = get_password_hash(new_password)
-    db.commit()
     
-    # Clear OTP
-    if email in otp_storage:
-        del otp_storage[email]
+    # Clear OTP after successful reset
+    user.otp = None
+    user.otp_expiry = None
+    db.commit()
     
     return {"success": True, "message": "Password reset successful"}
