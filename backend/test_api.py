@@ -245,7 +245,78 @@ def run_all_tests():
     test_endpoint("GET", "/api/transfers/all", 
                   description="Get all transfers")
     
-    # 9. Product Delete (run last)
+    # 9. Stock Adjustments
+    print("\n" + "-" * 60)
+    print("STOCK ADJUSTMENT ENDPOINTS")
+    print("-" * 60)
+    
+    adjustment_data = {
+        "product_id": 1,
+        "warehouse_id": 1,
+        "counted_quantity": 75,
+        "reason": "Physical count correction"
+    }
+    test_endpoint("POST", "/api/adjustments/add", data=adjustment_data, 
+                  description="Create stock adjustment")
+    
+    test_endpoint("GET", "/api/adjustments/all", 
+                  description="Get all adjustments")
+    
+    # 10. Stock Ledger
+    print("\n" + "-" * 60)
+    print("STOCK LEDGER ENDPOINTS")
+    print("-" * 60)
+    
+    test_endpoint("GET", "/api/ledger/all", 
+                  description="Get all ledger entries")
+    
+    test_endpoint("GET", "/api/ledger/product/1", 
+                  description="Get ledger for product 1")
+    
+    # 11. Dashboard
+    print("\n" + "-" * 60)
+    print("DASHBOARD ENDPOINTS")
+    print("-" * 60)
+    
+    test_endpoint("GET", "/api/dashboard/kpis", 
+                  description="Get dashboard KPIs")
+    
+    test_endpoint("GET", "/api/dashboard/low-stock?threshold=20", 
+                  description="Get low stock products")
+    
+    # 12. Search
+    print("\n" + "-" * 60)
+    print("SEARCH ENDPOINTS")
+    print("-" * 60)
+    
+    test_endpoint("GET", "/api/search/products?q=laptop", 
+                  description="Search products")
+    
+    test_endpoint("GET", "/api/search/categories", 
+                  description="Get all categories")
+    
+    test_endpoint("GET", "/api/search/stock?warehouse_id=1", 
+                  description="Filter stock by warehouse")
+    
+    test_endpoint("GET", "/api/search/movements/receipt", 
+                  description="Get receipt movements")
+    
+    # 13. Profile
+    print("\n" + "-" * 60)
+    print("PROFILE ENDPOINTS")
+    print("-" * 60)
+    
+    test_endpoint("GET", "/api/profile/me?user_id=1", 
+                  description="Get user profile")
+    
+    profile_update = {"name": "Updated User"}
+    test_endpoint("PUT", "/api/profile/update?user_id=1", data=profile_update, 
+                  description="Update user profile")
+    
+    test_endpoint("POST", "/api/profile/logout", 
+                  description="Logout user")
+    
+    # 14. Product Delete (run last)
     print("\n" + "-" * 60)
     print("DELETE ENDPOINTS")
     print("-" * 60)

@@ -69,3 +69,30 @@ class Transfer(Base):
     to_warehouse = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class StockAdjustment(Base):
+    __tablename__ = "stock_adjustments"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    counted_quantity = Column(Integer, nullable=False)
+    previous_quantity = Column(Integer, nullable=False)
+    difference = Column(Integer, nullable=False)
+    reason = Column(String(500), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class StockLedger(Base):
+    __tablename__ = "stock_ledger"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    warehouse_id = Column(Integer, ForeignKey("warehouses.id"), nullable=False)
+    movement_type = Column(String(50), nullable=False)  # receipt, delivery, transfer_in, transfer_out, adjustment
+    quantity = Column(Integer, nullable=False)
+    reference_id = Column(Integer, nullable=True)  # ID of receipt/delivery/transfer/adjustment
+    reference_type = Column(String(50), nullable=True)  # receipt, delivery, transfer, adjustment
+    balance_after = Column(Integer, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())

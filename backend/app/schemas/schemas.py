@@ -150,3 +150,102 @@ class TransferResponse(TransferBase):
 # Message Response
 class MessageResponse(BaseModel):
     message: str
+
+
+# Stock Adjustment Schemas
+class StockAdjustmentBase(BaseModel):
+    product_id: int
+    warehouse_id: int
+    counted_quantity: int
+    reason: Optional[str] = None
+
+
+class StockAdjustmentCreate(StockAdjustmentBase):
+    pass
+
+
+class StockAdjustmentResponse(BaseModel):
+    id: int
+    product_id: int
+    warehouse_id: int
+    counted_quantity: int
+    previous_quantity: int
+    difference: int
+    reason: Optional[str] = None
+    created_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# Stock Ledger Schemas
+class StockLedgerBase(BaseModel):
+    product_id: int
+    warehouse_id: int
+    movement_type: str
+    quantity: int
+    reference_id: Optional[int] = None
+    reference_type: Optional[str] = None
+    balance_after: int
+
+
+class StockLedgerCreate(StockLedgerBase):
+    pass
+
+
+class StockLedgerResponse(BaseModel):
+    id: int
+    product_id: int
+    warehouse_id: int
+    movement_type: str
+    quantity: int
+    reference_id: Optional[int] = None
+    reference_type: Optional[str] = None
+    balance_after: int
+    created_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+# Dashboard KPIs Schema
+class DashboardKPIs(BaseModel):
+    total_products: int
+    total_stock_quantity: int
+    low_stock_items: int
+    out_of_stock_items: int
+    pending_receipts: int
+    pending_deliveries: int
+    scheduled_transfers: int
+    total_warehouses: int
+
+
+# Filter Schemas
+class ProductFilter(BaseModel):
+    category: Optional[str] = None
+    low_stock: Optional[bool] = None
+    search: Optional[str] = None
+
+
+class MovementFilter(BaseModel):
+    document_type: Optional[str] = None  # receipt, delivery, transfer, adjustment
+    status: Optional[str] = None
+    warehouse_id: Optional[int] = None
+    product_id: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+
+# User Profile Schema
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    
+    class Config:
+        from_attributes = True
